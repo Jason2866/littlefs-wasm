@@ -36,9 +36,8 @@
 #define MAX_PATH_LENGTH       (LFS_NAME_MAX * 4)  // Allow nested paths
 #define MAX_FILES             16
 
-// Default disk version (2.0 = 0x00020000, 2.1 = 0x00020001)
-// Set to 0 to use the latest version
-#define DEFAULT_DISK_VERSION  0x00020000  // v2.0 for compatibility
+// Default disk version: 0 = auto-detect from image (supports v2.0 and v2.1)
+#define DEFAULT_DISK_VERSION  0
 
 // ============================================================================
 // RAM Block Device
@@ -172,7 +171,7 @@ int lfs_wasm_init(uint32_t blk_size, uint32_t blk_count, uint32_t lookahead) {
     cfg.file_max = 0;             // Use default
     cfg.attr_max = 0;             // Use default
 #ifdef LFS_MULTIVERSION
-    cfg.disk_version = disk_version;
+    cfg.disk_version = 0;  // 0 = auto-detect version from image (supports v2.0 and v2.1)
 #endif
 
     return 0;
@@ -250,10 +249,7 @@ int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_s
     cfg.file_max = 0;             // Use default
     cfg.attr_max = 0;             // Use default
 #ifdef LFS_MULTIVERSION
-    // When loading from image, use disk version 2.0 for maximum compatibility
-    // ESP-IDF typically uses LittleFS 2.0, and 2.1 cannot mount 2.0 images
-    // if disk_version is set to 0 (which defaults to latest 2.1)
-    cfg.disk_version = 0x00020000;  // Force v2.0 for ESP-IDF compatibility
+    cfg.disk_version = 0;  // 0 = auto-detect version from image (supports v2.0 and v2.1)
 #endif
 
     return 0;
