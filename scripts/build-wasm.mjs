@@ -109,7 +109,7 @@ function checkEmscripten() {
 }
 
 function downloadLittleFS() {
-  const version = process.env.LITTLEFS_VERSION || 'v2.9.3';
+  const version = process.env.LITTLEFS_VERSION || 'v2.11.2';
   const url = `https://github.com/littlefs-project/littlefs/archive/refs/tags/${version}.tar.gz`;
   const tarFile = join(buildDir, 'littlefs.tar.gz');
   
