@@ -16,16 +16,24 @@
 #include <stdint.h>
 
 // ============================================================================
-// Configuration
+// Configuration - ESP-IDF compatible
 // ============================================================================
 
-// IMPORTANT: This code requires LFS_MULTIVERSION to be defined at compile time!
-// Add -DLFS_MULTIVERSION to your Emscripten build flags.
+// IMPORTANT: Compile flags required for ESP-IDF compatibility:
+//   -DLFS_MULTIVERSION           Enable disk version control
+//   -DLFS_NAME_MAX=64            ESP-IDF default filename length
+//   -DLFS_ATTR_MAX=4             File metadata for timestamps
 
 #define DEFAULT_BLOCK_SIZE    4096
 #define DEFAULT_BLOCK_COUNT   256    // 1 MiB default
 #define DEFAULT_LOOKAHEAD     32
-#define MAX_PATH_LENGTH       256
+
+// Use LFS_NAME_MAX from compile flags, or default to ESP-IDF value
+#ifndef LFS_NAME_MAX
+#define LFS_NAME_MAX          64     // ESP-IDF default
+#endif
+
+#define MAX_PATH_LENGTH       (LFS_NAME_MAX * 4)  // Allow nested paths
 #define MAX_FILES             16
 
 // Default disk version (2.0 = 0x00020000, 2.1 = 0x00020001)
