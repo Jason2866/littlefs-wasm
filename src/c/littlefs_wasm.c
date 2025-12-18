@@ -162,6 +162,9 @@ int lfs_wasm_init(uint32_t blk_size, uint32_t blk_count, uint32_t lookahead) {
     cfg.cache_size = block_size;
     cfg.lookahead_size = la_size;
     cfg.block_cycles = 500;
+    cfg.name_max = LFS_NAME_MAX;  // ESP-IDF uses 64
+    cfg.file_max = 0;             // Use default
+    cfg.attr_max = 0;             // Use default
 #ifdef LFS_MULTIVERSION
     cfg.disk_version = disk_version;
 #endif
@@ -174,9 +177,11 @@ int lfs_wasm_init(uint32_t blk_size, uint32_t blk_count, uint32_t lookahead) {
  * @param image Pointer to the image data
  * @param image_size Size of the image in bytes
  * @param blk_size Block size (0 = auto-detect from image size)
+ * @param blk_count Number of blocks (0 = calculate from image_size/blk_size)
+ * @param lookahead Lookahead buffer size (0 = use default)
  * @return 0 on success, negative error code on failure
  */
-int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_size) {
+int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_size, uint32_t blk_count, uint32_t lookahead) {
     // Free existing storage
     if (ram_storage) {
         if (mounted) {
@@ -189,8 +194,18 @@ int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_s
 
     // Determine block size
     block_size = blk_size > 0 ? blk_size : DEFAULT_BLOCK_SIZE;
-    block_count = image_size / block_size;
+    
+    // Determine block count
+    if (blk_count > 0) {
+        block_count = blk_count;
+    } else {
+        block_count = image_size / block_size;
+    }
+    
     storage_size = block_size * block_count;
+    
+    // Use lookahead or default
+    uint32_t la_size = lookahead > 0 ? lookahead : DEFAULT_LOOKAHEAD;
 
     if (storage_size == 0 || block_count == 0) {
         return LFS_ERR_INVAL;
@@ -199,8 +214,14 @@ int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_s
     ram_storage = (uint8_t *)malloc(storage_size);
     if (!ram_storage) return LFS_ERR_NOMEM;
 
-    // Copy image data
-    memcpy(ram_storage, image, storage_size);
+    // Copy image data (only up to image_size, not storage_size which might be larger)
+    uint32_t copy_size = image_size < storage_size ? image_size : storage_size;
+    memcpy(ram_storage, image, copy_size);
+    
+    // Fill rest with 0xFF if image is smaller than storage
+    if (copy_size < storage_size) {
+        memset(ram_storage + copy_size, 0xFF, storage_size - copy_size);
+    }
 
     // Initialize file handles
     memset(file_in_use, 0, sizeof(file_in_use));
@@ -216,12 +237,16 @@ int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_s
     cfg.block_size = block_size;
     cfg.block_count = block_count;
     cfg.cache_size = block_size;
-    cfg.lookahead_size = DEFAULT_LOOKAHEAD;
+    cfg.lookahead_size = la_size;
     cfg.block_cycles = 500;
+    cfg.name_max = LFS_NAME_MAX;  // ESP-IDF uses 64
+    cfg.file_max = 0;             // Use default
+    cfg.attr_max = 0;             // Use default
 #ifdef LFS_MULTIVERSION
-    // When loading from image, preserve the existing disk version
-    // Set to 0 to not force any version (will read from superblock)
-    cfg.disk_version = 0;
+    // When loading from image, use disk version 2.0 for maximum compatibility
+    // ESP-IDF typically uses LittleFS 2.0, and 2.1 cannot mount 2.0 images
+    // if disk_version is set to 0 (which defaults to latest 2.1)
+    cfg.disk_version = 0x00020000;  // Force v2.0 for ESP-IDF compatibility
 #endif
 
     return 0;

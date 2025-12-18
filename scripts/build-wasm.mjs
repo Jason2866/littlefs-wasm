@@ -31,7 +31,7 @@ const EMCC_FLAGS = [
   '-DLFS_MULTIVERSION',
   '-DLFS_NAME_MAX=64',              // ESP-IDF default (shorter filenames)
   '-DLFS_FILE_MAX=2147483647',      // 2GB max file size
-  '-DLFS_ATTR_MAX=4',               // File metadata/attributes (for timestamps),
+  '-DLFS_ATTR_MAX=4',               // File metadata/attributes (for timestamps)
   
   // Memory settings
   '-s', 'INITIAL_MEMORY=4194304',     // 4MB initial memory
@@ -192,6 +192,14 @@ function build() {
     console.error('❌ Build failed - output files not created');
     process.exit(1);
   }
+  
+  // Convert to ES module by replacing 'var createLittleFS=' with 'export default'
+  console.log('\n📦 Converting to ES module...');
+  let jsContent = readFileSync(jsOutput, 'utf8');
+  jsContent = jsContent.replace(/^var createLittleFS=/, 'export default ');
+  // Remove CommonJS/AMD exports at the end
+  jsContent = jsContent.replace(/if\(typeof exports===.*$/, '');
+  writeFileSync(jsOutput, jsContent);
   
   // Show file sizes
   const jsSize = (readFileSync(jsOutput).length / 1024).toFixed(1);
