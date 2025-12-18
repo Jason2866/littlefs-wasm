@@ -1,0 +1,44 @@
+{
+  "name": "littlefs-wasm",
+  "version": "1.0.0",
+  "description": "LittleFS filesystem compiled to WebAssembly for browser usage",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./littlefs": {
+      "types": "./dist/littlefs/index.d.ts",
+      "import": "./dist/littlefs/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run build:wasm && npm run build:ts",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:ts": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "littlefs",
+    "wasm",
+    "webassembly",
+    "filesystem",
+    "esp32",
+    "embedded"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
