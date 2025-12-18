@@ -281,7 +281,7 @@ try {
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+BSD 3 License - see [LICENSE](LICENSE)
 
 ## Credits
 
