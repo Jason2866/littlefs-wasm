@@ -285,6 +285,16 @@ int lfs_wasm_mount(void) {
     int err = lfs_mount(&lfs, &cfg);
     if (err == 0) {
         mounted = 1;
+        
+        // Read the actual disk version from the mounted filesystem
+        // and store it so we preserve it on subsequent writes
+        struct lfs_fsinfo fsinfo;
+        if (lfs_fs_stat(&lfs, &fsinfo) == 0) {
+            disk_version = fsinfo.disk_version;
+#ifdef LFS_MULTIVERSION
+            cfg.disk_version = disk_version;  // Update config to match mounted version
+#endif
+        }
     }
     return err;
 }
