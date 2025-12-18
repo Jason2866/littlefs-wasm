@@ -59,6 +59,11 @@ static int mounted = 0;
 static lfs_file_t open_files[MAX_FILES];
 static int file_in_use[MAX_FILES];
 
+// Directory handles - separate from files because lfs_dir_t != lfs_file_t
+#define MAX_DIRS 8
+static lfs_dir_t open_dirs[MAX_DIRS];
+static int dir_in_use[MAX_DIRS];
+
 // ============================================================================
 // Block Device Operations
 // ============================================================================
@@ -146,8 +151,9 @@ int lfs_wasm_init(uint32_t blk_size, uint32_t blk_count, uint32_t lookahead) {
     // Initialize to 0xFF (NOR flash erased state)
     memset(ram_storage, 0xFF, storage_size);
 
-    // Initialize file handles
+    // Initialize file and directory handles
     memset(file_in_use, 0, sizeof(file_in_use));
+    memset(dir_in_use, 0, sizeof(dir_in_use));
 
     // Configure LittleFS
     memset(&cfg, 0, sizeof(cfg));
@@ -223,8 +229,9 @@ int lfs_wasm_init_from_image(uint8_t *image, uint32_t image_size, uint32_t blk_s
         memset(ram_storage + copy_size, 0xFF, storage_size - copy_size);
     }
 
-    // Initialize file handles
+    // Initialize file and directory handles
     memset(file_in_use, 0, sizeof(file_in_use));
+    memset(dir_in_use, 0, sizeof(dir_in_use));
 
     // Configure LittleFS
     memset(&cfg, 0, sizeof(cfg));
@@ -372,21 +379,20 @@ int lfs_wasm_stat(const char *path, int *out_type, uint32_t *out_size) {
 int lfs_wasm_dir_open(const char *path) {
     if (!mounted) return LFS_ERR_INVAL;
     
-    // Find a free slot
+    // Find a free directory slot
     int slot = -1;
-    for (int i = 0; i < MAX_FILES; i++) {
-        if (!file_in_use[i]) {
+    for (int i = 0; i < MAX_DIRS; i++) {
+        if (!dir_in_use[i]) {
             slot = i;
             break;
         }
     }
     if (slot < 0) return LFS_ERR_NOMEM;
     
-    lfs_dir_t *dir = (lfs_dir_t *)&open_files[slot];
-    int err = lfs_dir_open(&lfs, dir, path);
+    int err = lfs_dir_open(&lfs, &open_dirs[slot], path);
     if (err < 0) return err;
     
-    file_in_use[slot] = 2; // Mark as directory
+    dir_in_use[slot] = 1;
     return slot;
 }
 
@@ -401,14 +407,13 @@ int lfs_wasm_dir_open(const char *path) {
  */
 int lfs_wasm_dir_read(int handle, char *out_name, int out_name_len, 
                        int *out_type, uint32_t *out_size) {
-    if (handle < 0 || handle >= MAX_FILES || file_in_use[handle] != 2) {
+    if (handle < 0 || handle >= MAX_DIRS || !dir_in_use[handle]) {
         return LFS_ERR_INVAL;
     }
     
-    lfs_dir_t *dir = (lfs_dir_t *)&open_files[handle];
     struct lfs_info info;
     
-    int res = lfs_dir_read(&lfs, dir, &info);
+    int res = lfs_dir_read(&lfs, &open_dirs[handle], &info);
     if (res <= 0) return res;
     
     // Skip . and ..
@@ -430,13 +435,12 @@ int lfs_wasm_dir_read(int handle, char *out_name, int out_name_len,
  * @return 0 on success, negative error code on failure
  */
 int lfs_wasm_dir_close(int handle) {
-    if (handle < 0 || handle >= MAX_FILES || file_in_use[handle] != 2) {
+    if (handle < 0 || handle >= MAX_DIRS || !dir_in_use[handle]) {
         return LFS_ERR_INVAL;
     }
     
-    lfs_dir_t *dir = (lfs_dir_t *)&open_files[handle];
-    int err = lfs_dir_close(&lfs, dir);
-    file_in_use[handle] = 0;
+    int err = lfs_dir_close(&lfs, &open_dirs[handle]);
+    dir_in_use[handle] = 0;
     return err;
 }
 

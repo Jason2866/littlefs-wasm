@@ -27,11 +27,11 @@ const EMCC_FLAGS = [
   '-O3',
   '-flto',
   
-  // LittleFS configuration - ESP-IDF compatible settings
+  // LittleFS configuration
   '-DLFS_MULTIVERSION',
-  '-DLFS_NAME_MAX=64',              // ESP-IDF default (shorter filenames)
+  '-DLFS_NAME_MAX=255',             // Default LittleFS (some ESP-IDF uses 64, but image shows 255)
   '-DLFS_FILE_MAX=2147483647',      // 2GB max file size
-  '-DLFS_ATTR_MAX=4',               // File metadata/attributes (for timestamps)
+  '-DLFS_ATTR_MAX=1022',            // Default attr max
   
   // Memory settings
   '-s', 'INITIAL_MEMORY=4194304',     // 4MB initial memory
